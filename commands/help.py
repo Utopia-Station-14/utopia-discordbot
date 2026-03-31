@@ -1,5 +1,5 @@
 from init import bot
-from discord import Embed
+from disnake import Embed
 
 
 embed_help = {
@@ -7,12 +7,12 @@ embed_help = {
     "color": 0x00FF99,
     "fields": [
         {
-            "name": "Команды: ",
+            "name": "Команды:",
             "value": (
                 "&help - Проводник по возможностям бота.\n"
                 "&print - Вывод указанного текста.\n"
-                "&p - Вывод числа π. \n"
-                "&fact - Вывод факториала указанного числа. \n"
+                "&p - Вывод числа π.\n"
+                "&fact - Вывод факториала указанного числа.\n"
             ),
             "inline": False
         },

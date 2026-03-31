@@ -1,4 +1,6 @@
-from discord.ext import commands
+from disnake.ext import commands
+from functools import wraps
+
 
 def check_roles(ctx, allowed_roles: list[str]) -> bool:
     user_roles = {role.name.strip().lower() for role in ctx.author.roles}
@@ -6,12 +8,11 @@ def check_roles(ctx, allowed_roles: list[str]) -> bool:
     return bool(user_roles & allowed_roles)
 
 
-from functools import wraps
-
 def roles_required(*roles):
-    roles = set(r.lower() for r in roles)
+    roles = {r.lower() for r in roles}
 
     def wrapper(func):
+
         @wraps(func)
         async def inner(ctx, *args, **kwargs):
             user_roles = {r.name.lower() for r in ctx.author.roles}
