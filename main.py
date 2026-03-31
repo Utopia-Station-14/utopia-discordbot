@@ -1,9 +1,9 @@
 from init import bot
 import importlib
 import pkgutil
-import os
 import config
-from discord.ext import commands as discord_commands
+
+from disnake.ext import commands as disnake_commands
 
 
 def load_modules(folder: str):
@@ -31,13 +31,13 @@ async def on_ready():
 @bot.event
 async def on_command_error(ctx, error):
 
-    if isinstance(error, discord_commands.CommandNotFound):
+    if isinstance(error, disnake_commands.CommandNotFound):
         return await ctx.send("Я нихуя не поняла.")
 
-    if isinstance(error, discord_commands.MissingPermissions):
+    if isinstance(error, disnake_commands.MissingPermissions):
         return await ctx.send("ТЫ НЕ ПРОЙДЕЕЕШЬ.")
 
-    if isinstance(error, discord_commands.MissingAnyRole):
+    if isinstance(error, disnake_commands.MissingAnyRole):
         return await ctx.send("Приятель, а не пошёл бы ты нахуй.")
 
     await ctx.send(f"⚠️ Ошибка: {error}")

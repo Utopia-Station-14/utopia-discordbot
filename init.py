@@ -1,14 +1,15 @@
-import discord
-from discord.ext import commands
+from disnake import Intents
+from disnake.ext.commands import Bot
 
-print(discord.__file__)
-print(dir(discord))
+intent = Intents.default()
+intent.message_content = True
+intent.members = True
+intent.guilds = True
+intent.guild_messages = True
+intent.guild_reactions = True
 
-intents = discord.Intents.default()
-intents.message_content = True
-
-bot = commands.Bot(
+bot = Bot(
+    help_command=None,
     command_prefix="&",
-    intents=intents,
-    help_command=None
+    intents=intent
 )
