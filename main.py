@@ -15,6 +15,18 @@ load_modules("commands")
 load_modules("helpers")
 
 @bot.event
+async def on_ready():
+    print(f"Бот запущен как {bot.user}")
+
+    channel = bot.get_channel(1487927594870374531)
+
+    if channel:
+        await channel.send("Проверка модулей... ожидайте.")
+        await channel.send("Здравствуйте, я проснулась!")
+    else:
+        print("Не удалось найти канал для логов")
+
+@bot.event
 async def on_command_error(ctx, error):
 
     if isinstance(error, discord_commands.CommandNotFound):

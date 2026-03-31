@@ -12,7 +12,7 @@ embed_help = {
                 "&help - Проводник по возможностям бота.\n"
                 "&print - Вывод указанного текста.\n"
                 "&p - Вывод числа π. \n"
-                "&fat - Вывод факториала указанного числа. \n"
+                "&fact - Вывод факториала указанного числа. \n"
             ),
             "inline": False
         },
@@ -38,6 +38,6 @@ async def help_command(ctx):
     if bot.user and bot.user.avatar:
         embed.set_thumbnail(url=bot.user.avatar.url)
 
-    embed.set_footer(text="Версия: betabuild V_0.999")
+    embed.set_footer(text="Версия: betabuild V_0.9999")
 
     await ctx.send(embed=embed)
