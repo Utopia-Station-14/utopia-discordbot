@@ -2,6 +2,7 @@ from init import bot
 import importlib
 import pkgutil
 import os
+import config
 from discord.ext import commands as discord_commands
 
 
@@ -18,12 +19,13 @@ load_modules("helpers")
 
 @bot.event
 async def on_ready():
-    print(f"Бот запущен как {bot.user}")
+    if config.GLOBAL_MASSAGE_ON:
+        print(f"Бот запущен как {bot.user}")
 
-    channel = await bot.fetch_channel(1487927594870374531)
+        channel = await bot.fetch_channel(1472600615606550568)
 
-    await channel.send("Проверка модулей... ожидайте.")
-    await channel.send("Здравствуйте, я проснулась!")
+        await channel.send("Проверка модулей... ожидайте.")
+        await channel.send("Здравствуйте, я проснулась!")
 
 
 @bot.event
@@ -41,4 +43,4 @@ async def on_command_error(ctx, error):
     await ctx.send(f"⚠️ Ошибка: {error}")
 
 
-bot.run(os.getenv("DISCORD_KEY"))
+bot.run(config.DISCORD_KEY)
