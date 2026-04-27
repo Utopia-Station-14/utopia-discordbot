@@ -25,7 +25,7 @@ async def get_all():
         return {r["user_id"]: r["value"] for r in rows}
 
 
-async def add_user(user_id):
+async def add_user(user_id: str):
     async with pool.acquire() as conn:
         await conn.execute("""
         INSERT INTO spriters (user_id, value)
@@ -34,7 +34,14 @@ async def add_user(user_id):
         """, user_id)
 
 
-async def change_value(user_id, delta):
+async def remove_user(user_id: str):
+    async with pool.acquire() as conn:
+        await conn.execute("""
+        DELETE FROM spriters WHERE user_id = $1
+        """, user_id)
+
+
+async def change_value(user_id: str, delta: int):
     async with pool.acquire() as conn:
         await conn.execute("""
         INSERT INTO spriters (user_id, value)
@@ -44,7 +51,7 @@ async def change_value(user_id, delta):
         """, user_id, delta)
 
 
-async def get_value(user_id):
+async def get_value(user_id: str):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             "SELECT value FROM spriters WHERE user_id = $1",

@@ -11,10 +11,6 @@ from database import (
 
 CURRENCY_NAME = "Социальный Рейтинг"
 
-ROLE_RULES = {
-    "Глава Спрайтинга": "Спрайтер",
-}
-
 
 def has_permission(ctx):
     return ADMIN in [r.name for r in ctx.author.roles]
@@ -29,7 +25,7 @@ async def table(ctx, action: str = None, member: disnake.Member = None):
 
     if action is None or action.lower() == "show":
 
-        data = get_all()
+        data = await get_all()
 
         embed = disnake.Embed(title="📋 Таблица спрайтеров", color=0xFFC0CB)
 
@@ -59,7 +55,7 @@ async def table(ctx, action: str = None, member: disnake.Member = None):
         if member is None:
             return await ctx.send("Укажи пользователя")
 
-        add_user(str(member.id))
+        await add_user(str(member.id))
         return await ctx.send(f"Добавлен {member.mention}")
 
     if action.lower() == "remove":
@@ -70,7 +66,7 @@ async def table(ctx, action: str = None, member: disnake.Member = None):
         if member is None:
             return await ctx.send("Укажи пользователя")
 
-        remove_user(str(member.id))
+        await remove_user(str(member.id))
         return await ctx.send(f"Удалён {member.mention}")
 
     return await ctx.send("add / remove / show")
@@ -84,7 +80,7 @@ async def rate(ctx, member: disnake.Member = None, value: str = None):
 
     delta = int(value)
 
-    change_value(str(member.id), delta)
+    await change_value(str(member.id), delta)
 
     await ctx.send("Обновлено!")
 
@@ -110,12 +106,12 @@ async def buy(ctx, level: str = None):
     cost = BUY_COSTS[level]
     uid = str(ctx.author.id)
 
-    value = get_value(uid)
+    value = await get_value(uid)
 
     if value < cost:
         return await ctx.send("Не хватает СР")
 
-    change_value(uid, -cost)
+    await change_value(uid, -cost)
 
     channel = bot.get_channel(BUY_CHANNEL_ID)
 
