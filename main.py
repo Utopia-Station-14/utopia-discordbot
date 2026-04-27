@@ -21,7 +21,6 @@ async def on_ready():
     print(f"Бот запущен как {bot.user}")
 
     channel = await bot.fetch_channel(1472600615606550568)
-
     await channel.send("Бот запущен!")
 
 

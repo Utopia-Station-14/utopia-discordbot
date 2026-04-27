@@ -9,7 +9,7 @@ intent.guild_messages = True
 intent.guild_reactions = True
 
 bot = Bot(
-    help_command=None,
     command_prefix="&",
+    help_command=None,
     intents=intent
 )
