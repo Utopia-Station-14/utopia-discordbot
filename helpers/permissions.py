@@ -18,7 +18,7 @@ def roles_required(*roles):
             user_roles = {r.name.lower() for r in ctx.author.roles}
 
             if not user_roles & roles:
-                await ctx.send("нет прав")
+                await ctx.send("Недостаточно прав!")
                 return
 
             return await func(ctx, *args, **kwargs)
