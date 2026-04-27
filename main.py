@@ -1,3 +1,4 @@
+import asyncio
 from init import bot
 import importlib
 import pkgutil
@@ -6,7 +7,6 @@ from database import init_db
 
 from disnake.ext import commands as disnake_commands
 
-init_db()
 
 def load_modules(folder: str):
     package = importlib.import_module(folder)
@@ -29,4 +29,10 @@ async def on_ready():
         await channel.send("Проверка модулей... ожидайте.")
         await channel.send("Здравствуйте, я проснулась!")
 
-bot.run(config.DISCORD_KEY)
+
+async def main():
+    await init_db()
+    bot.run(config.DISCORD_KEY)
+
+
+asyncio.run(main())
