@@ -1,11 +1,8 @@
-import asyncio
 from init import bot
 import importlib
 import pkgutil
 import config
 from database import init_db
-
-from disnake.ext import commands as disnake_commands
 
 
 def load_modules(folder: str):
@@ -21,18 +18,16 @@ load_modules("helpers")
 
 @bot.event
 async def on_ready():
-    if config.GLOBAL_MASSAGE_ON:
-        print(f"Бот запущен как {bot.user}")
+    print(f"Бот запущен как {bot.user}")
 
-        channel = await bot.fetch_channel(1472600615606550568)
+    channel = await bot.fetch_channel(1472600615606550568)
 
-        await channel.send("Проверка модулей... ожидайте.")
-        await channel.send("Здравствуйте, я проснулась!")
+    await channel.send("Бот запущен!")
 
 
-async def main():
+@bot.event
+async def setup_hook():
     await init_db()
-    bot.run(config.DISCORD_KEY)
 
 
-asyncio.run(main())
+bot.run(config.DISCORD_KEY)
