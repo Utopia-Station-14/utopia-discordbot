@@ -2,6 +2,7 @@ import json
 import asyncio
 import os
 import atexit
+import subprocess
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(BASE_DIR, "spriters.json")
@@ -10,6 +11,7 @@ print("[DB] file:", DATA_FILE)
 
 _data: dict[str, int] = {}
 _dirty = False
+
 _save_task: asyncio.Task | None = None
 
 
@@ -55,6 +57,16 @@ def save_data():
         print("[DB] save error:", e)
 
 
+def git_push():
+    try:
+        subprocess.run(["git", "add", DATA_FILE], check=True)
+        subprocess.run(["git", "commit", "-m", "auto-update"], check=True)
+        subprocess.run(["git", "push"], check=True)
+        print("[GIT] pushed")
+    except Exception as e:
+        print("[GIT] push failed:", e)
+
+
 def _force_save():
     if _dirty:
         print("[DB] force save on exit")
@@ -89,6 +101,16 @@ async def _delayed_save():
 
     except asyncio.CancelledError:
         pass
+
+
+async def git_autopush_loop():
+    while True:
+        await asyncio.sleep(60)
+
+        if _dirty:
+            save_data()
+
+        git_push()
 
 
 async def get_all():
