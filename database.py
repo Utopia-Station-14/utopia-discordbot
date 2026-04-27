@@ -1,18 +1,18 @@
 import asyncpg
 import os
 
-pool = None
+DB_URL = os.getenv("DATABASE_URL")
+
+pool: asyncpg.Pool | None = None
 
 
 async def init_db():
     global pool
 
-    db_url = os.getenv("DATABASE_URL")
+    if not DB_URL:
+        raise Exception("DATABASE_URL не задан")
 
-    if not db_url:
-        raise Exception("DATABASE_URL не найден в environment!")
-
-    pool = await asyncpg.create_pool(db_url)
+    pool = await asyncpg.create_pool(DB_URL)
 
     async with pool.acquire() as conn:
         await conn.execute("""
@@ -23,22 +23,23 @@ async def init_db():
         """)
 
 
-def get_pool():
+def ensure_pool():
     if pool is None:
         raise Exception("DB pool не инициализирован (init_db не вызван)")
-    return pool
 
 
 async def get_all():
-    p = get_pool()
-    async with p.acquire() as conn:
+    ensure_pool()
+
+    async with pool.acquire() as conn:
         rows = await conn.fetch("SELECT user_id, value FROM spriters")
         return {r["user_id"]: r["value"] for r in rows}
 
 
 async def add_user(user_id: str):
-    p = get_pool()
-    async with p.acquire() as conn:
+    ensure_pool()
+
+    async with pool.acquire() as conn:
         await conn.execute("""
         INSERT INTO spriters (user_id, value)
         VALUES ($1, 0)
@@ -47,16 +48,18 @@ async def add_user(user_id: str):
 
 
 async def remove_user(user_id: str):
-    p = get_pool()
-    async with p.acquire() as conn:
+    ensure_pool()
+
+    async with pool.acquire() as conn:
         await conn.execute("""
         DELETE FROM spriters WHERE user_id = $1
         """, user_id)
 
 
 async def change_value(user_id: str, delta: int):
-    p = get_pool()
-    async with p.acquire() as conn:
+    ensure_pool()
+
+    async with pool.acquire() as conn:
         await conn.execute("""
         INSERT INTO spriters (user_id, value)
         VALUES ($1, $2)
@@ -66,8 +69,9 @@ async def change_value(user_id: str, delta: int):
 
 
 async def get_value(user_id: str):
-    p = get_pool()
-    async with p.acquire() as conn:
+    ensure_pool()
+
+    async with pool.acquire() as conn:
         row = await conn.fetchrow(
             "SELECT value FROM spriters WHERE user_id = $1",
             user_id

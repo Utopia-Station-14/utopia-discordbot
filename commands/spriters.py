@@ -24,6 +24,7 @@ def has_spriter_access(ctx):
 async def table(ctx, action: str = None, member: disnake.Member = None):
 
     if action is None or action.lower() == "show":
+
         data = await get_all()
 
         embed = disnake.Embed(title="📋 Таблица спрайтеров", color=0xFFC0CB)
@@ -43,9 +44,11 @@ async def table(ctx, action: str = None, member: disnake.Member = None):
                 text += f"{i}. неизвестный | {value} {CURRENCY_NAME}\n"
 
         embed.add_field(name="Список:", value=text, inline=False)
+
         return await ctx.send(embed=embed)
 
     if action.lower() == "add":
+
         if not has_permission(ctx):
             return await ctx.send("Нет прав")
 
@@ -56,6 +59,7 @@ async def table(ctx, action: str = None, member: disnake.Member = None):
         return await ctx.send(f"Добавлен {member.mention}")
 
     if action.lower() == "remove":
+
         if not has_permission(ctx):
             return await ctx.send("Нет прав")
 
@@ -75,6 +79,7 @@ async def rate(ctx, member: disnake.Member = None, value: str = None):
         return await ctx.send("Нет прав")
 
     delta = int(value)
+
     await change_value(str(member.id), delta)
 
     await ctx.send("Обновлено!")

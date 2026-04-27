@@ -2,7 +2,6 @@ from init import bot
 import importlib
 import pkgutil
 import config
-from database import init_db
 
 
 def load_modules(folder: str):
@@ -19,13 +18,14 @@ load_modules("helpers")
 @bot.event
 async def on_ready():
     print(f"Бот запущен как {bot.user}")
-
+    
     channel = await bot.fetch_channel(1472600615606550568)
     await channel.send("Бот запущен!")
 
 
 @bot.event
 async def setup_hook():
+    from database import init_db
     await init_db()
 
 
