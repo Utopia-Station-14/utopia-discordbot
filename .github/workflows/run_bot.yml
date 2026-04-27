@@ -27,5 +27,4 @@ jobs:
       - name: Run bot
         env:
           DISCORD_KEY: ${{ secrets.DISCORD_KEY }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python main.py

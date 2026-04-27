@@ -1,33 +1,32 @@
 from init import bot
 import disnake
-from config import ADMIN
 from database import (
     get_all,
     add_user,
     remove_user,
     change_value,
-    get_value
 )
 
 CURRENCY_NAME = "Социальный Рейтинг"
 
 
 def has_permission(ctx):
-    return ADMIN in [r.name for r in ctx.author.roles]
-
-
-def has_spriter_access(ctx):
-    return any(r.name in ["Спрайтер", "Глава Спрайтинга"] for r in ctx.author.roles)
+    return ctx.author.guild_permissions.administrator
 
 
 @bot.command(name="table")
 async def table(ctx, action: str = None, member: disnake.Member = None):
 
-    if action is None or action.lower() == "show":
+    action = (action or "show").lower()
+
+    if action == "show":
 
         data = await get_all()
 
-        embed = disnake.Embed(title="📋 Таблица спрайтеров", color=0xFFC0CB)
+        embed = disnake.Embed(
+            title="📋 Таблица спрайтеров",
+            color=0xFFC0CB
+        )
 
         if not data:
             embed.description = "Пусто"
@@ -47,39 +46,36 @@ async def table(ctx, action: str = None, member: disnake.Member = None):
 
         return await ctx.send(embed=embed)
 
-    if action.lower() == "add":
-
-        if not has_permission(ctx):
-            return await ctx.send("Нет прав")
+    if action == "add":
 
         if member is None:
             return await ctx.send("Укажи пользователя")
 
         await add_user(str(member.id))
-        return await ctx.send(f"Добавлен {member.mention}")
+        return await ctx.send("Пользователь был добавлен в таблицу.")
 
-    if action.lower() == "remove":
-
-        if not has_permission(ctx):
-            return await ctx.send("Нет прав")
+    if action == "remove":
 
         if member is None:
             return await ctx.send("Укажи пользователя")
 
         await remove_user(str(member.id))
-        return await ctx.send(f"Удалён {member.mention}")
+        return await ctx.send("Пользователь был удалён из таблицы.")
 
-    return await ctx.send("add / remove / show")
+    return await ctx.send("Корректное использование: &table add/remove/show")
 
 
 @bot.command(name="rate")
 async def rate(ctx, member: disnake.Member = None, value: str = None):
 
-    if not has_permission(ctx):
-        return await ctx.send("Нет прав")
+    if member is None or value is None:
+        return await ctx.send("Использование: &rate @user +10")
 
-    delta = int(value)
+    try:
+        delta = int(value)
+    except ValueError:
+        return await ctx.send("Значение должно быть целым числом.")
 
     await change_value(str(member.id), delta)
 
-    await ctx.send("Обновлено!")
+    await ctx.send("Социальный рейтинг успешно обновлён!")

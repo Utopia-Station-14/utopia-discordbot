@@ -1,79 +1,116 @@
-import asyncpg
+import json
+import asyncio
 import os
+import atexit
 
-DB_URL = os.getenv("DATABASE_URL")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_FILE = os.path.join(BASE_DIR, "spriters.json")
 
-pool: asyncpg.Pool | None = None
+print("[DB] file:", DATA_FILE)
 
-
-async def init_db():
-    global pool
-
-    if not DB_URL:
-        raise Exception("DATABASE_URL не задан")
-
-    pool = await asyncpg.create_pool(DB_URL)
-
-    async with pool.acquire() as conn:
-        await conn.execute("""
-        CREATE TABLE IF NOT EXISTS spriters (
-            user_id TEXT PRIMARY KEY,
-            value INT DEFAULT 0
-        )
-        """)
+_data: dict[str, int] = {}
+_dirty = False
+_save_task: asyncio.Task | None = None
 
 
-def ensure_pool():
-    if pool is None:
-        raise Exception("DB pool не инициализирован (init_db не вызван)")
+def load_data():
+    global _data
+
+    print("[DB] loading...")
+
+    if not os.path.exists(DATA_FILE):
+        print("[DB] file not found, creating new")
+        _data = {}
+        return
+
+    try:
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+
+            if not content:
+                print("[DB] empty file, reset")
+                _data = {}
+                return
+
+            _data = json.loads(content)
+
+        print("[DB] loaded:", _data)
+
+    except Exception as e:
+        print("[DB] load error:", e)
+        _data = {}
+
+
+def save_data():
+    global _dirty
+
+    try:
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(_data, f, ensure_ascii=False, indent=2)
+
+        _dirty = False
+        print("[DB] saved:", _data)
+
+    except Exception as e:
+        print("[DB] save error:", e)
+
+
+def _force_save():
+    if _dirty:
+        print("[DB] force save on exit")
+        save_data()
+
+
+atexit.register(_force_save)
+
+
+def schedule_save():
+    global _save_task, _dirty
+
+    _dirty = True
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return
+
+    if _save_task and not _save_task.done():
+        _save_task.cancel()
+
+    _save_task = loop.create_task(_delayed_save())
+
+
+async def _delayed_save():
+    try:
+        await asyncio.sleep(60)
+
+        if _dirty:
+            save_data()
+
+    except asyncio.CancelledError:
+        pass
 
 
 async def get_all():
-    ensure_pool()
-
-    async with pool.acquire() as conn:
-        rows = await conn.fetch("SELECT user_id, value FROM spriters")
-        return {r["user_id"]: r["value"] for r in rows}
+    return _data
 
 
 async def add_user(user_id: str):
-    ensure_pool()
-
-    async with pool.acquire() as conn:
-        await conn.execute("""
-        INSERT INTO spriters (user_id, value)
-        VALUES ($1, 0)
-        ON CONFLICT (user_id) DO NOTHING
-        """, user_id)
+    if user_id not in _data:
+        _data[user_id] = 0
+        schedule_save()
 
 
 async def remove_user(user_id: str):
-    ensure_pool()
-
-    async with pool.acquire() as conn:
-        await conn.execute("""
-        DELETE FROM spriters WHERE user_id = $1
-        """, user_id)
+    if user_id in _data:
+        del _data[user_id]
+        schedule_save()
 
 
 async def change_value(user_id: str, delta: int):
-    ensure_pool()
-
-    async with pool.acquire() as conn:
-        await conn.execute("""
-        INSERT INTO spriters (user_id, value)
-        VALUES ($1, $2)
-        ON CONFLICT (user_id)
-        DO UPDATE SET value = spriters.value + $2
-        """, user_id, delta)
+    _data[user_id] = _data.get(user_id, 0) + delta
+    schedule_save()
 
 
 async def get_value(user_id: str):
-    ensure_pool()
-
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT value FROM spriters WHERE user_id = $1",
-            user_id
-        )
-        return row["value"] if row else 0
+    return _data.get(user_id, 0)
