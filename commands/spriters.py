@@ -1,46 +1,27 @@
 from init import bot
 import disnake
-import json
-import os
 from config import ADMIN
+from database import (
+    get_all,
+    add_user,
+    remove_user,
+    change_value,
+    get_value
+)
 
-FILE_PATH = "spriter_table.json"
 CURRENCY_NAME = "Социальный Рейтинг"
+
 ROLE_RULES = {
     "Глава Спрайтинга": "Спрайтер",
 }
 
-def has_permission(ctx) -> bool:
-    author_roles = [role.name for role in ctx.author.roles]
 
-    if ADMIN in author_roles:
-        return True
-
-    return any(role in ROLE_RULES for role in author_roles)
+def has_permission(ctx):
+    return ADMIN in [r.name for r in ctx.author.roles]
 
 
-def is_spriter(ctx) -> bool:
-    return any(role.name == "Спрайтер" for role in ctx.author.roles)
-
-
-def load_table():
-    if not os.path.exists(FILE_PATH):
-        return {}
-
-    try:
-        with open(FILE_PATH, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data if isinstance(data, dict) else {}
-    except json.JSONDecodeError:
-        return {}
-
-
-def save_table():
-    with open(FILE_PATH, "w", encoding="utf-8") as f:
-        json.dump(spriter_table, f, ensure_ascii=False, indent=4)
-
-
-spriter_table = load_table()
+def has_spriter_access(ctx):
+    return any(r.name in ["Спрайтер", "Глава Спрайтинга"] for r in ctx.author.roles)
 
 
 @bot.command(name="table")
@@ -48,93 +29,65 @@ async def table(ctx, action: str = None, member: disnake.Member = None):
 
     if action is None or action.lower() == "show":
 
-        embed = disnake.Embed(
-            title="📋 Таблица спрайтеров",
-            color=0xFFC0CB
-        )
+        data = get_all()
 
-        if not spriter_table:
-            embed.description = "Таблица пустая"
+        embed = disnake.Embed(title="📋 Таблица спрайтеров", color=0xFFC0CB)
+
+        if not data:
+            embed.description = "Пусто"
             return await ctx.send(embed=embed)
 
         text = ""
 
-        for i, (user_id, value) in enumerate(spriter_table.items(), start=1):
-            member_obj = ctx.guild.get_member(int(user_id))
+        for i, (uid, value) in enumerate(data.items(), start=1):
+            user = ctx.guild.get_member(int(uid))
 
-            if member_obj:
-                text += f"{i}. {member_obj.mention} | {value} {CURRENCY_NAME}\n"
+            if user:
+                text += f"{i}. {user.mention} | {value} {CURRENCY_NAME}\n"
             else:
-                text += f"{i}. `Пользователь не найден` | {value} {CURRENCY_NAME}\n"
+                text += f"{i}. неизвестный | {value} {CURRENCY_NAME}\n"
 
         embed.add_field(name="Список:", value=text, inline=False)
-
-        if bot.user and bot.user.avatar:
-            embed.set_thumbnail(url=bot.user.avatar.url)
 
         return await ctx.send(embed=embed)
 
     if action.lower() == "add":
 
         if not has_permission(ctx):
-            return await ctx.send("У вас недостаточно прав!")
+            return await ctx.send("Нет прав")
 
         if member is None:
-            return await ctx.send("Используйте: `&table add @user`")
+            return await ctx.send("Укажи пользователя")
 
-        key = str(member.id)
-
-        if key in spriter_table:
-            return await ctx.send("Пользователь уже в таблице.")
-
-        spriter_table[key] = 0
-        save_table()
-
-        return await ctx.send(f"Добавлен: {member.mention}")
+        add_user(str(member.id))
+        return await ctx.send(f"Добавлен {member.mention}")
 
     if action.lower() == "remove":
 
         if not has_permission(ctx):
-            return await ctx.send("У вас недостаточно прав!")
+            return await ctx.send("Нет прав")
 
         if member is None:
-            return await ctx.send("Используйте: `&table remove @user`")
+            return await ctx.send("Укажи пользователя")
 
-        key = str(member.id)
+        remove_user(str(member.id))
+        return await ctx.send(f"Удалён {member.mention}")
 
-        if key not in spriter_table:
-            return await ctx.send("Пользователя нет в таблице.")
+    return await ctx.send("add / remove / show")
 
-        del spriter_table[key]
-        save_table()
-
-        return await ctx.send(f"Удалён: {member.mention}")
-
-    return await ctx.send("Неизвестное действие: add / remove / show")
 
 @bot.command(name="rate")
 async def rate(ctx, member: disnake.Member = None, value: str = None):
 
     if not has_permission(ctx):
-        return await ctx.send("У вас недостаточно прав!")
+        return await ctx.send("Нет прав")
 
-    if member is None:
-        return await ctx.send("Укажите пользователя!")
+    delta = int(value)
 
-    try:
-        delta = int(value)
-    except:
-        return await ctx.send("Введите ЦЕЛОЕ число (+/-)")
+    change_value(str(member.id), delta)
 
-    key = str(member.id)
+    await ctx.send("Обновлено!")
 
-    if key not in spriter_table:
-        spriter_table[key] = 0
-
-    spriter_table[key] += delta
-    save_table()
-
-    await ctx.send("Социальный Рейтинг успешно обновлен!")
 
 BUY_CHANNEL_ID = 1457655329595854929
 
@@ -145,41 +98,30 @@ BUY_COSTS = {
 }
 
 
-def has_spriter_access(ctx) -> bool:
-    return any(role.name in ["Спрайтер", "Глава Спрайтинга"] for role in ctx.author.roles)
-
-
 @bot.command(name="buy")
 async def buy(ctx, level: str = None):
 
     if not has_spriter_access(ctx):
-        return await ctx.send("У вас нет доступа к покупке!")
+        return await ctx.send("Нет доступа")
 
     if level not in BUY_COSTS:
-        return await ctx.send("Используй: &buy 1 / 2 / 3")
+        return await ctx.send("1 / 2 / 3")
 
     cost = BUY_COSTS[level]
-    user_id = str(ctx.author.id)
+    uid = str(ctx.author.id)
 
-    if user_id not in spriter_table:
-        return await ctx.send("Ты не в таблице спрайтеров!")
+    value = get_value(uid)
 
-    if spriter_table[user_id] < cost:
-        return await ctx.send("Недостаточно Социального Рейтинга!")
+    if value < cost:
+        return await ctx.send("Не хватает СР")
 
-    spriter_table[user_id] -= cost
-    save_table()
+    change_value(uid, -cost)
 
     channel = bot.get_channel(BUY_CHANNEL_ID)
 
     if channel:
         await channel.send(
-            f"<@&{next(role.id for role in ctx.guild.roles if role.name == 'Глава Спрайтинга')}> "
-            f"Пользователь {ctx.author.mention} купил уровень {level} за {cost} СР.\n"
-            f"Остаток: {spriter_table[user_id]} {CURRENCY_NAME}"
+            f"{ctx.author.mention} купил уровень {level} за {cost} СР"
         )
 
-    await ctx.send(
-        f"Покупка успешна! -{cost} СР\n"
-        f"Осталось: {spriter_table[user_id]} {CURRENCY_NAME}"
-    )
+    await ctx.send("Покупка успешна")

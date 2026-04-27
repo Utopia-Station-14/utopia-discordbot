@@ -2,9 +2,11 @@ from init import bot
 import importlib
 import pkgutil
 import config
+from database import init_db
 
 from disnake.ext import commands as disnake_commands
 
+init_db()
 
 def load_modules(folder: str):
     package = importlib.import_module(folder)
