@@ -27,20 +27,4 @@ async def on_ready():
         await channel.send("Проверка модулей... ожидайте.")
         await channel.send("Здравствуйте, я проснулась!")
 
-
-@bot.event
-async def on_command_error(ctx, error):
-
-    if isinstance(error, disnake_commands.CommandNotFound):
-        return await ctx.send("Я нихуя не поняла.")
-
-    if isinstance(error, disnake_commands.MissingPermissions):
-        return await ctx.send("ТЫ НЕ ПРОЙДЕЕЕШЬ.")
-
-    if isinstance(error, disnake_commands.MissingAnyRole):
-        return await ctx.send("Приятель, а не пошёл бы ты нахуй.")
-
-    await ctx.send(f"⚠️ Ошибка: {error}")
-
-
 bot.run(config.DISCORD_KEY)
