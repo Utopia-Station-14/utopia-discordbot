@@ -1,138 +1,105 @@
 import json
-import asyncio
-import os
-import atexit
-import subprocess
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_FILE = os.path.join(BASE_DIR, "spriters.json")
+from init import bot
+from config import TABLE_CHANNEL
 
-print("[DB] file:", DATA_FILE)
+MESSAGE_PREFIX = "```json\n"
+MESSAGE_SUFFIX = "\n```"
 
-_data: dict[str, int] = {}
-_dirty = False
-
-_save_task: asyncio.Task | None = None
+_message_cache = None
 
 
-def load_data():
-    global _data
+async def _get_message():
+    global _message_cache
 
-    print("[DB] loading...")
+    if _message_cache is not None:
+        return _message_cache
 
-    if not os.path.exists(DATA_FILE):
-        print("[DB] file not found, creating new")
-        _data = {}
-        return
+    channel = bot.get_channel(TABLE_CHANNEL)
 
-    try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            content = f.read().strip()
+    if channel is None:
+        channel = await bot.fetch_channel(TABLE_CHANNEL)
 
-            if not content:
-                print("[DB] empty file, reset")
-                _data = {}
-                return
+    async for message in channel.history(limit=100):
 
-            _data = json.loads(content)
+        if message.author.id != bot.user.id:
+            continue
 
-        print("[DB] loaded:", _data)
+        _message_cache = message
+        return message
 
-    except Exception as e:
-        print("[DB] load error:", e)
-        _data = {}
+    message = await channel.send("```json\n{}\n```")
+    _message_cache = message
+    return message
 
 
-def save_data():
-    global _dirty
+async def _read():
+    message = await _get_message()
 
-    try:
-        with open(DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(_data, f, ensure_ascii=False, indent=2)
+    content = message.content.strip()
 
-        _dirty = False
-        print("[DB] saved:", _data)
+    if content.startswith(MESSAGE_PREFIX):
+        content = content[len(MESSAGE_PREFIX):]
 
-    except Exception as e:
-        print("[DB] save error:", e)
+    if content.endswith(MESSAGE_SUFFIX):
+        content = content[:-len(MESSAGE_SUFFIX)]
 
-
-def git_push():
-    try:
-        subprocess.run(["git", "add", DATA_FILE], check=True)
-        subprocess.run(["git", "commit", "-m", "auto-update"], check=True)
-        subprocess.run(["git", "push"], check=True)
-        print("[GIT] pushed")
-    except Exception as e:
-        print("[GIT] push failed:", e)
-
-
-def _force_save():
-    if _dirty:
-        print("[DB] force save on exit")
-        save_data()
-
-
-atexit.register(_force_save)
-
-
-def schedule_save():
-    global _save_task, _dirty
-
-    _dirty = True
+    if not content.strip():
+        return {}
 
     try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        return
-
-    if _save_task and not _save_task.done():
-        _save_task.cancel()
-
-    _save_task = loop.create_task(_delayed_save())
+        return json.loads(content)
+    except Exception:
+        return {}
 
 
-async def _delayed_save():
-    try:
-        await asyncio.sleep(60)
+async def _write(data: dict):
+    message = await _get_message()
 
-        if _dirty:
-            save_data()
+    text = json.dumps(
+        data,
+        ensure_ascii=False,
+        indent=4
+    )
 
-    except asyncio.CancelledError:
-        pass
-
-
-async def git_autopush_loop():
-    while True:
-        await asyncio.sleep(60)
-
-        if _dirty:
-            save_data()
-
-        git_push()
+    await message.edit(
+        content=f"```json\n{text}\n```"
+    )
 
 
 async def get_all():
-    return _data
+    return await _read()
 
 
 async def add_user(user_id: str):
-    if user_id not in _data:
-        _data[user_id] = 0
-        schedule_save()
+    data = await _read()
+
+    if user_id not in data:
+        data[user_id] = 0
+
+    await _write(data)
 
 
 async def remove_user(user_id: str):
-    if user_id in _data:
-        del _data[user_id]
-        schedule_save()
+    data = await _read()
+
+    if user_id in data:
+        del data[user_id]
+
+    await _write(data)
 
 
 async def change_value(user_id: str, delta: int):
-    _data[user_id] = _data.get(user_id, 0) + delta
-    schedule_save()
+    data = await _read()
+
+    if user_id not in data:
+        data[user_id] = 0
+
+    data[user_id] += delta
+
+    await _write(data)
 
 
 async def get_value(user_id: str):
-    return _data.get(user_id, 0)
+    data = await _read()
+    return data.get(user_id, 0)

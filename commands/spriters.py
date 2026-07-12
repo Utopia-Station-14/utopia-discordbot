@@ -1,10 +1,11 @@
 from init import bot
 import disnake
-from database import (
+from table_db import (
     get_all,
     add_user,
     remove_user,
     change_value,
+    get_value
 )
 
 CURRENCY_NAME = "Социальный Рейтинг"
