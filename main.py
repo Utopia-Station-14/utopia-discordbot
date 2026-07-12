@@ -1,10 +1,7 @@
 from init import bot
-from database import load_data
 import importlib
 import pkgutil
 import config
-
-load_data()
 
 def load_modules(folder: str):
     package = importlib.import_module(folder)
