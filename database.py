@@ -30,20 +30,24 @@ async def _get_message():
 
 async def _read():
     message = await _get_message()
+
     content = message.content.strip()
 
     if content.startswith(MESSAGE_PREFIX):
-        content = content[len(MESSAGE_PREFIX):].strip()
-    if content.endswith(MESSAGE_SUFFIX):
-        content = content[:-len(MESSAGE_SUFFIX)].strip()
+        content = content[len(MESSAGE_PREFIX):]
 
-    if not content:
+    if content.endswith(MESSAGE_SUFFIX):
+        content = content[:-len(MESSAGE_SUFFIX)]
+
+    if not content.strip():
         return {}
 
     try:
-        return json.loads(content)
-    except Exception as e:
-        print(f"[DB READ ERROR] Не удалось распарсить JSON: {e}")
+        data = json.loads(content)
+        if isinstance(data, dict):
+            return data
+        return {}
+    except Exception:
         return {}
 
 
