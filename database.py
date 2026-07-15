@@ -1,13 +1,11 @@
 import json
-
 from init import bot
 from config import TABLE_CHANNEL
 
-MESSAGE_PREFIX = "```json\n"
-MESSAGE_SUFFIX = "\n```"
+MESSAGE_PREFIX = "```json"
+MESSAGE_SUFFIX = "```"
 
 _message_cache = None
-
 
 async def _get_message():
     global _message_cache
@@ -16,15 +14,12 @@ async def _get_message():
         return _message_cache
 
     channel = bot.get_channel(TABLE_CHANNEL)
-
     if channel is None:
         channel = await bot.fetch_channel(TABLE_CHANNEL)
 
     async for message in channel.history(limit=100):
-
         if message.author.id != bot.user.id:
             continue
-
         _message_cache = message
         return message
 
@@ -35,25 +30,25 @@ async def _get_message():
 
 async def _read():
     message = await _get_message()
-
     content = message.content.strip()
 
     if content.startswith(MESSAGE_PREFIX):
-        content = content[len(MESSAGE_PREFIX):]
-
+        content = content[len(MESSAGE_PREFIX):].strip()
     if content.endswith(MESSAGE_SUFFIX):
-        content = content[:-len(MESSAGE_SUFFIX)]
+        content = content[:-len(MESSAGE_SUFFIX)].strip()
 
-    if not content.strip():
+    if not content:
         return {}
 
     try:
         return json.loads(content)
-    except Exception:
+    except Exception as e:
+        print(f"[DB READ ERROR] Не удалось распарсить JSON: {e}")
         return {}
 
 
 async def _write(data: dict):
+    global _message_cache
     message = await _get_message()
 
     text = json.dumps(
@@ -62,9 +57,10 @@ async def _write(data: dict):
         indent=4
     )
 
-    await message.edit(
+    updated_message = await message.edit(
         content=f"```json\n{text}\n```"
     )
+    _message_cache = updated_message
 
 
 async def get_all():
@@ -73,30 +69,24 @@ async def get_all():
 
 async def add_user(user_id: str):
     data = await _read()
-
     if user_id not in data:
         data[user_id] = 0
-
-    await _write(data)
+        await _write(data)
 
 
 async def remove_user(user_id: str):
     data = await _read()
-
     if user_id in data:
         del data[user_id]
-
-    await _write(data)
+        await _write(data)
 
 
 async def change_value(user_id: str, delta: int):
     data = await _read()
-
     if user_id not in data:
         data[user_id] = 0
 
     data[user_id] += delta
-
     await _write(data)
 
 
