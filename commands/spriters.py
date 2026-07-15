@@ -59,7 +59,7 @@ async def table(ctx, action: str = None, member: disnake.Member = None):
             return await ctx.send("Укажи пользователя")
 
         await add_user(str(member.id))
-        return await ctx.send(f"Пользователь {member.mention} был добавлен в таблицу.")
+        return await ctx.send(f"Пользователь был добавлен в таблицу.")
 
     if action == "remove":
         if not ctx.author.guild_permissions.administrator:
@@ -69,7 +69,7 @@ async def table(ctx, action: str = None, member: disnake.Member = None):
             return await ctx.send("Укажи пользователя")
 
         await remove_user(str(member.id))
-        return await ctx.send(f"Пользователь {member.mention} был удалён из таблицы.")
+        return await ctx.send(f"Пользователь был удалён из таблицы.")
 
     return await ctx.send("Корректное использование: `&table add/remove/show`")
 
@@ -86,4 +86,4 @@ async def rate(ctx, member: disnake.Member = None, value: str = None):
         return await ctx.send("Значение должно быть целым числом.")
 
     await change_value(str(member.id), delta)
-    await ctx.send(f"Социальный рейтинг для {member.mention} успешно изменен на {value}!")
+    await ctx.send(f"Социальный рейтинг успешно изменен на {value}!")
