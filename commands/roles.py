@@ -1,7 +1,7 @@
 import disnake
 from disnake.ext import commands
 from init import bot
-from helpers.permissions import check_permissions
+from ..helpers.permissions import check_permissions
 
 async def give_role(member: disnake.Member, role: disnake.Role) -> None:
     await member.add_roles(role)
