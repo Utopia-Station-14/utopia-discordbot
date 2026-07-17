@@ -9,7 +9,7 @@ from database import (
     get_value
 )
 from init import bot
-from permissions import check_permissions
+from helpers.permissions import check_permissions
 
 CURRENCY_NAME = "Социальный Рейтинг"
 
