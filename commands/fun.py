@@ -2,6 +2,7 @@ import re
 from init import bot
 from helpers.permissions import roles_required
 import math
+import random
 
 @bot.command(name="print")
 @roles_required("Свидетель")
@@ -38,3 +39,8 @@ async def factorial(ctx, number: int = None):
 
     result = math.factorial(number)
     await ctx.send(f"{number}! = {result}")
+
+@bot.command(name="answer")
+async def answer(ctx):
+    answers = ["Да", "Нет", "Возможно"] 
+    await ctx.send(random.choice(answers))
