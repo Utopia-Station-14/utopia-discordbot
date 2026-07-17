@@ -1,17 +1,18 @@
-from init import bot
+import os
+import sys
 import importlib
 import pkgutil
 import config
+from init import bot
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 def load_modules(folder: str):
     package = importlib.import_module(folder)
-
     for _, mod_name, _ in pkgutil.iter_modules(package.__path__):
         importlib.import_module(f"{folder}.{mod_name}")
 
-
 load_modules("commands")
-load_modules("helpers")
 
 
 @bot.event
