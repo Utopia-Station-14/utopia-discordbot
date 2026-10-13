@@ -42,5 +42,5 @@ async def factorial(ctx, number: int = None):
 
 @bot.command(name="answer")
 async def answer(ctx):
-    answers = ["Да", "Нет", "Возможно"] 
+    answers = ["Да", "https://tenor.com/view/truthloose-truth-nuke-truth-true-ss13-gif-6842449477306616958" "Нет", "Возможно"] 
     await ctx.send(random.choice(answers))
