@@ -65,6 +65,14 @@ member: disnake.Member = None, *, role_name: str = None) -> None:
             await ctx.send("У бота недостаточно прав для снятия этой роли.")
 
 
+def is_in_project(member: disnake.Member) -> bool:
+    all_names = set()
+    for cfg in DEPARTMENT_CONFIG.values():
+        all_names.update(cfg["titles"])
+        all_names.update(cfg["base_roles"])
+    return any(r.name in all_names for r in member.roles)
+
+
 @bot.command(name="department")
 async def department_command(ctx, action: str = None, member: disnake.Member = None, department_key: str = None, tier: int = 0, full_remove: str = None) -> None:
     if not action or not member or not department_key:
@@ -85,8 +93,7 @@ async def department_command(ctx, action: str = None, member: disnake.Member = N
     titles = config["titles"]
     base_role_names = config["base_roles"]
 
-    main_role_check = config["name"]
-    if not check_permissions(ctx, main_role_check):
+    if not check_permissions(ctx, config["name"]):
         await ctx.send("У вас недостаточно прав для управления этим отделом!")
         return
 
@@ -98,37 +105,37 @@ async def department_command(ctx, action: str = None, member: disnake.Member = N
 
         target_role = disnake.utils.get(ctx.guild.roles, name=target_title_name)
         if not target_role:
-            await ctx.send(f"Роль-титул '{target_title_name}' не найдена на сервере.")
+            await ctx.send(f"Роль '{target_title_name}' не найдена на сервере.")
             return
 
-        added_roles_list = []
+        was_in_project = is_in_project(member)
         promoted = False
-
-        if junior_title_name and junior_title_name != target_title_name:
-            junior_role = disnake.utils.get(ctx.guild.roles, name=junior_title_name)
-            if junior_role and junior_role in member.roles:
-                try:
-                    await take_role(member, junior_role)
-                    promoted = True
-                except disnake.Forbidden:
-                    pass
+        gave_anything = False
 
         try:
+            if junior_title_name and junior_title_name != target_title_name:
+                junior_role = disnake.utils.get(ctx.guild.roles, name=junior_title_name)
+                if junior_role and junior_role in member.roles:
+                    await take_role(member, junior_role)
+                    promoted = True
+
             if target_role not in member.roles:
                 await give_role(member, target_role)
-                added_roles_list.append(target_role.name)
+                gave_anything = True
 
             for b_name in base_role_names:
                 b_role = disnake.utils.get(ctx.guild.roles, name=b_name)
                 if b_role and b_role not in member.roles:
                     await give_role(member, b_role)
-                    added_roles_list.append(b_role.name)
+                    gave_anything = True
 
-            # Формируем ответ
             if promoted:
-                await ctx.send(f"Пользователь {member.mention} повышен до **{target_role.name}**!")
-            elif added_roles_list:
-                await ctx.send(f"Пользователь получает роли: {member.mention}: " + ", ".join([f"**{r}**" for r in added_roles_list]))
+                await ctx.send(f"Пользователь {member.mention} повышен до: **{target_role.name}**, поздравим его!")
+            elif gave_anything:
+                if was_in_project:
+                    await ctx.send(f"Пользователь {member.mention} вступает в отдел: **{target_role.name}**, поздравим его!")
+                else:
+                    await ctx.send(f"Пользователь {member.mention} вступает в команду проекта в роли: **{target_role.name}**, поздравим его!")
             else:
                 await ctx.send(f"У пользователя {member.mention} уже есть все необходимые роли этого отдела.")
 
@@ -141,17 +148,16 @@ async def department_command(ctx, action: str = None, member: disnake.Member = N
             is_full_removal = full_remove and full_remove.lower() == "all"
 
             if is_full_removal:
-                roles_to_remove_names = titles + base_role_names
-                for r_name in roles_to_remove_names:
+                for r_name in titles + base_role_names:
                     r_obj = disnake.utils.get(ctx.guild.roles, name=r_name)
                     if r_obj and r_obj in member.roles:
                         await take_role(member, r_obj)
                         removed_roles_list.append(r_obj.name)
-                
+
                 if removed_roles_list:
-                    await ctx.send(f"Пользователь {member.mention} покидает команду проекта **{config['name']}**. Сняты роли: " + ", ".join([f"**{r}**" for r in removed_roles_list]))
+                    await ctx.send(f"Пользователь {member.mention} покидает команду проекта, желаем удачи!")
                 else:
-                    await ctx.send(f"У пользователя {member.mention} отсутствовали роли отдела {config['name']}.")
+                    await ctx.send(f"У пользователя {member.mention} отсутствовали роли отдела **{config['name']}**.")
             else:
                 for t_name in titles:
                     t_obj = disnake.utils.get(ctx.guild.roles, name=t_name)
@@ -160,7 +166,8 @@ async def department_command(ctx, action: str = None, member: disnake.Member = N
                         removed_roles_list.append(t_obj.name)
 
                 if removed_roles_list:
-                    await ctx.send(f"С пользователя {member.mention} сняты роли отдела **{config['name']}**: " + ", ".join([f"**{r}**" for r in removed_roles_list]))
+                    roles_text = ", ".join(f"**{r}**" for r in removed_roles_list)
+                    await ctx.send(f"Пользователь {member.mention} покидает отдел: {roles_text}, не прощаемся!")
                 else:
                     await ctx.send(f"У пользователя {member.mention} не найдено ролей в отделе **{config['name']}**.")
 
